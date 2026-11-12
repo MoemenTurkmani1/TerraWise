@@ -1,0 +1,50 @@
+import { chromium, expect } from '@playwright/test'
+import { mkdir } from 'node:fs/promises'
+
+const browser = await chromium.launch({ executablePath: process.env.BROWSER_PATH || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true })
+const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } })
+const page = await context.newPage()
+const errors = []
+page.on('pageerror', error => errors.push(error.message))
+const base = process.env.BASE_URL || 'http://localhost:5173'
+await mkdir('test-results', { recursive: true })
+try {
+  await page.goto(base)
+  await expect(page.getByRole('heading', { name: 'Good things start with a plan.' })).toBeVisible()
+  await expect(page.locator('.stat-value').first()).toContainText('12.5')
+  await page.evaluate(() => document.fonts.ready)
+  await page.screenshot({ path: 'test-results/dashboard-desktop.png', fullPage: true })
+  await page.getByRole('textbox', { name: 'Search fields', exact: true }).fill('Riverside')
+  await page.locator('.search-results').getByRole('link', { name: /Riverside Plot/ }).click()
+  await expect(page.getByRole('heading', { name: 'Riverside Plot', exact: true })).toBeVisible()
+  await page.goto(`${base}/settings`)
+  await page.getByRole('textbox', { name: 'Display name' }).fill('Maya')
+  await page.getByRole('button', { name: 'Save profile' }).click()
+  await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible()
+  const exportPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Export workspace JSON' }).click()
+  await expect((await exportPromise).suggestedFilename()).toBe('terrawise-workspace.json')
+  await page.reload()
+  await expect(page.getByRole('textbox', { name: 'Display name' })).toHaveValue('Maya')
+  await page.goto(`${base}/about`)
+  await expect(page.getByRole('heading', { name: /Know your land/ })).toBeVisible()
+  await page.screenshot({ path: 'test-results/landing-desktop.png', fullPage: true })
+  await page.goto(`${base}/signup`)
+  await expect(page.getByText(/Authentication not configured/)).toBeVisible()
+  await page.getByRole('textbox', { name: 'Your name' }).fill('Samira')
+  await page.getByRole('button', { name: 'Create demo workspace' }).click()
+  await expect(page.getByText(/Welcome back, Samira/)).toBeVisible()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.screenshot({ path: 'test-results/dashboard-mobile.png', fullPage: true })
+  await page.getByRole('button', { name: 'Open menu' }).click()
+  await page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'My fields' }).click()
+  await expect(page.getByRole('heading', { name: 'My fields', exact: true })).toBeVisible()
+  for (const route of ['/', '/settings', '/data-sources', '/about', '/login', '/does-not-exist']) {
+    await page.goto(`${base}${route}`)
+    await expect(page.getByRole('heading').first()).toBeVisible()
+    const fits = await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)
+    expect(fits, `No mobile horizontal overflow at ${route}`).toBe(true)
+  }
+  expect(errors, 'No application exceptions').toEqual([])
+  console.log('PASS: dashboard, search, profile persistence, workspace export, demo signup, mobile navigation, landing, data sources, and responsive general routes. Screenshots in test-results/.')
+} finally { await browser.close() }

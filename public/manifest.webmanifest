@@ -1,0 +1,10 @@
+{
+  "name": "TerraWise — Smart crop rotation",
+  "short_name": "TerraWise",
+  "description": "Explainable, climate-aware crop rotation planning.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f7f3",
+  "theme_color": "#214f3d",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
