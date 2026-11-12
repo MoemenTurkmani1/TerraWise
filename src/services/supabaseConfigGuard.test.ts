@@ -7,7 +7,7 @@ describe('build-time browser secret guard', () => {
   })
   it('rejects secret names, secret keys and service-role JWTs without printing their values', () => {
     const token = `header.${btoa(JSON.stringify({ role: 'service_role' }))}.signature`
-    for (const env of [{ VITE_SUPABASE_SERVICE_ROLE_KEY: 'do-not-print' }, { VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_secret_do-not-print' }, { VITE_SOMETHING: token }]) {
+    for (const env of [{ VITE_SUPABASE_SERVICE_ROLE_KEY: 'do-not-print' }, { VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_secret_do-not-print' }, { VITE_SOMETHING: token }, { VITE_OPENAI_API_KEY: 'do-not-print' }, { VITE_OTHER: 'sk-do-not-print' }, { VITE_GEMINI_API_KEY: 'do-not-print' }, { VITE_OTHER: 'AIza-do-not-print' }, { VITE_OTHER: 'gsk_do-not-print' }, { VITE_UPSTASH_REDIS_REST_TOKEN: 'do-not-print' }]) {
       try { assertNoBrowserSecrets(env); throw new Error('guard did not reject the secret') } catch (error) { expect((error as Error).message).toContain('Unsafe browser environment'); expect((error as Error).message).not.toContain('do-not-print'); expect((error as Error).message).not.toContain(token) }
     }
   })

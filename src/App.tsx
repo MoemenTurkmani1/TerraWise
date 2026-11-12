@@ -9,6 +9,7 @@ const FieldListPage = lazy(() => import('./pages/Fields').then(m => ({ default: 
 const FieldWizardPage = lazy(() => import('./pages/Fields').then(m => ({ default: m.FieldWizardPage })))
 const FieldDetailPage = lazy(() => import('./pages/Fields').then(m => ({ default: m.FieldDetailPage })))
 const RecommendationsPage = lazy(() => import('./pages/Recommendations'))
+const AgronomistPage = lazy(() => import('./pages/Agronomist'))
 const PlannerPage = lazy(() => import('./pages/Planner'))
 const AnalysisPage = lazy(() => import('./pages/Analysis').then(m => ({ default: m.AnalysisPage })))
 const HistoryPage = lazy(() => import('./pages/Analysis').then(m => ({ default: m.HistoryPage })))
@@ -17,7 +18,7 @@ const AnalysisDetailPage = lazy(() => import('./pages/Analysis').then(m => ({ de
 export default function App() {
   const { pathname } = useLocation()
   useEffect(() => { window.scrollTo(0, 0) }, [pathname])
-  return <Suspense fallback={<div className="page-loading" role="status"><span className="loading-leaf" /><p>Preparing your workspace…</p></div>}><Routes>
+  return <Suspense fallback={<div className="page-loading" role="status"><span className="loading-leaf" /><p>Preparing AgriLumina…</p></div>}><Routes>
     <Route path="/about" element={<LandingPage />} />
     <Route path="/login" element={<AuthScreen />} />
     <Route path="/signup" element={<AuthScreen signup />} />
@@ -32,6 +33,7 @@ export default function App() {
       <Route path="fields/:id" element={<FieldDetailPage />} />
       <Route path="recommendations" element={<RecommendationsPage />} />
       <Route path="planner" element={<PlannerPage />} />
+      <Route path="agronomist" element={<AgronomistPage />} />
       <Route path="analysis" element={<AnalysisPage />} />
       <Route path="history" element={<HistoryPage />} />
       <Route path="history/:id" element={<AnalysisDetailPage />} />

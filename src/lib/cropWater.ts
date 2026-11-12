@@ -1,4 +1,4 @@
-import type { FieldWaterInputs } from '../types'
+import type { FieldWaterInputs } from '../types.ts'
 
 export interface GrowthStageProfile {
   cropId: string

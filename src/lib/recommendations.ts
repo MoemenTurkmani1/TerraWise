@@ -1,3 +1,4 @@
+import { hasSyntheticClimate } from './demoEvidence';
 import { crops } from '../data/crops';
 import type { ClimateData, Crop, Field, Recommendation, RotationStep } from '../types';
 import { historySerial, sortedHistory } from './history';
@@ -33,6 +34,7 @@ function recentHistory(field: Field) {
 function scoreCrop(crop: Crop, field: Field, climate: ClimateData, season: string): Recommendation {
   const missingInputs: string[] = [];
   const warnings = [
+    ...(climate.source === 'demo' ? ['DEMO / SYNTHETIC: calculated from fictional field and climate inputs. Not NASA data or planting advice.'] : []),
     'Exploratory profile only. Crop ranges and provisional factor weights are not agronomist-validated.',
     'Water compatibility and crop-specific critical constraints have not been verified.',
   ];
@@ -105,7 +107,7 @@ export function excludedCrops(season: string): ExcludedCrop[] {
 
 /** Unranked exploration only; alphabetical order never represents suitability. */
 export function assessCrops(field: Field, climate: ClimateData, season = 'Autumn'): Recommendation[] {
-  if (needsLegacyReview(field) || climate.source !== 'nasa-power' || climate.monthly.length !== 12 || !(season in seasonMonths)) return [];
+  if (needsLegacyReview(field) || (climate.source !== 'nasa-power' && !hasSyntheticClimate(field, climate)) || climate.monthly.length !== 12 || !(season in seasonMonths)) return [];
   if (!climate.monthly.every(month => month && [month.temperature, month.rainfall, month.solar].every(Number.isFinite))) return [];
   return crops.map(crop => scoreCrop(crop, field, climate, season)).sort((a, b) => a.crop.name.localeCompare(b.crop.name));
 }

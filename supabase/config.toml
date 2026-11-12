@@ -1,0 +1,4 @@
+project_id = "terrawise"
+
+[functions.ai-agronomist]
+verify_jwt = true

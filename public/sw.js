@@ -37,7 +37,7 @@ self.addEventListener('fetch', event => {
         if (response.ok) await cache.put('/', response.clone())
         return response
       } catch {
-        return await cache.match('/') ?? new Response('TerraWise is offline and the application shell has not been cached yet.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+        return await cache.match('/') ?? new Response('AgriLumina is offline and the application shell has not been cached yet.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
       }
     })())
     return

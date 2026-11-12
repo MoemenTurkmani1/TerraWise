@@ -23,7 +23,7 @@ try {
   await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible()
   const exportPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Export workspace JSON' }).click()
-  await expect((await exportPromise).suggestedFilename()).toBe('terrawise-workspace.json')
+  await expect((await exportPromise).suggestedFilename()).toBe('agrilumina-workspace.json')
   await page.reload()
   await expect(page.getByRole('textbox', { name: 'Display name' })).toHaveValue('Maya')
   await page.goto(`${base}/about`)

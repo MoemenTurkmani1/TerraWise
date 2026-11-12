@@ -1,4 +1,4 @@
-# TERRAWISE SCIENTIFIC SCORING AUDIT
+# AgriLumina scientific scoring audit
 
 **Scope:** Research and audit only. No application code, packages, database tables, or configuration were changed. The requested top-four engine is a proposed future design, not the current behavior. This report does not certify the present recommendations for planting decisions.
 
@@ -6,14 +6,14 @@
 
 ## 1. Executive findings and current status
 
-1. TerraWise has a transparent, deterministic, **uncalibrated prototype**, not a crop-specific, validated scientific suitability model. It stores eight illustrative crops and currently displays **up to five**, not the requested top four. [Engine](src/lib/recommendations.ts#L7); [catalog](src/data/crops.ts#L6); [UI](src/pages/Recommendations.tsx#L49).
+1. AgriLumina has a transparent, deterministic, **uncalibrated prototype**, not a crop-specific, validated scientific suitability model. It stores eight illustrative crops and currently displays **up to five**, not the requested top four. [Engine](src/lib/recommendations.ts#L7); [catalog](src/data/crops.ts#L6); [UI](src/pages/Recommendations.tsx#L49).
 2. Current scored components are seasonal mean temperature, pH, simple N/P/K ratios, recent crop-family history, and selected priorities. The nominal water component is **always zero**. Seasonal precipitation, solar radiation, humidity, soil moisture/texture/EC, and sample depth do not produce water or crop-fit points. Some still affect warnings, completeness, or confidence.
 3. Missing pH, N/P/K and crop history receive zero rather than an explicit unknown component. This prevents artificial credit but can treat unknown information like a poor measurement, change rankings, and make unequal-evidence candidates look comparable. The 20% water component is zero for every candidate; therefore the current weighted total cannot exceed **80/100** before family caps. Zero does not mean measured unsuitability.
 4. The only crop-specific hard eligibility rule checks the starter Spring/Autumn window. NASA source plus 12 months and legacy-field review are operational gates, not agronomic hard constraints. No locally validated soil, water, frost, toxicity, drainage, or pest exclusion exists. [rankCrops/assessEligibility](src/lib/recommendations.ts#L118).
 5. All recommendations have **low** confidence in the present code: the water-balance missing-input message is always inserted. Seven-item completeness can nevertheless be 100% because it counts climate, pH, N, P, K, organic matter and recognized prior crop, **not water balance**. It is neither statistical confidence nor proof of scientific adequacy. [scoreCrop](src/lib/recommendations.ts#L60).
 6. NASA POWER integration is real, historical, gridded and location-based. The score uses a simple average of four monthly mean temperatures from the latest year only; it does not use frost days, heat episodes or multi-year variability. A 1/3/5-year analysis request stores prior years as context. No fake fallback is generated. [NASA service](src/services/nasaPower.ts#L15); [analysis](src/pages/Analysis.tsx#L43).
 7. FAO land evaluation matches land qualities to a **specific crop, management and setting**; it does not supply universally valid cutoffs or numerical weights. Crop-stage, cultivar, soil-test method and geography matter. [FAO framework][FLE]; [FAO framework detail][FLE2].
-8. ECOCROP is a source to research, not a current TerraWise integration or a guarantee of validated local thresholds. FAO says the original database was discontinued around 2015 and incorporated into the GAEZ platform. GAEZ v4's 5-arc-minute grids and historical scenarios cannot be substituted for a field soil test. [ECOCROP][ECO]; [GAEZ v4][GAEZ].
+8. ECOCROP is a source to research, not a current AgriLumina integration or a guarantee of validated local thresholds. FAO says the original database was discontinued around 2015 and incorporated into the GAEZ platform. GAEZ v4's 5-arc-minute grids and historical scenarios cannot be substituted for a field soil test. [ECOCROP][ECO]; [GAEZ v4][GAEZ].
 9. The reusable TypeScript logic is a strong starting point, but the crop catalog includes web image paths, the recommendation engine imports a browser-repository helper, NASA caching uses browser session storage, and Leaflet/Recharts/localStorage are web-specific. A shared pure domain package and platform adapters are needed for Expo.
 10. **Do not ship an authoritative top four yet.** First agree on a pilot region/crops and obtain rule-level agronomist approval, data quality gates, real constraints, and independent local validation. If fewer than four crops have sufficient evidence, return fewer; do not fill slots with invented scores.
 
@@ -291,7 +291,7 @@ New files would likely be needed for a shared domain package, versioned crop-rul
 
 ## 10. Scientific and technical sources
 
-Links below are official guidance, provider documentation, or primary research. Their presence does **not** validate any specific current TerraWise numeric cutoff. Applicability, version, availability and rights must be checked again when a future catalog is curated.
+Links below are official guidance, provider documentation, or primary research. Their presence does **not** validate any specific current AgriLumina numeric cutoff. Applicability, version, availability and rights must be checked again when a future catalog is curated.
 
 - [FAO Framework for Land Evaluation: overview][FLE] and [principles and non-universal limits][FLE2].
 - [FAO ECOCROP status][ECO], [FAO/IIASA GAEZ v4][GAEZ], [GAEZ v4 model documentation][GAEZDOC], and [FAO Crop Calendar][CALENDAR].

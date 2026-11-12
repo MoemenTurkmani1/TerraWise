@@ -1,4 +1,4 @@
-import type { ClimateData } from '../types';
+import type { ClimateData } from '../types.ts';
 
 export const POWER_API = 'https://power.larc.nasa.gov/api/temporal/monthly/point';
 export const POWER_DOCUMENTATION = 'https://power.larc.nasa.gov/docs/services/api/temporal/monthly/';
@@ -54,7 +54,7 @@ export function parsePowerResponse(raw: unknown, year: number): ClimateData {
 type CachedResponse = { latitude: number; longitude: number; startYear: number; endYear: number; retrievedAt: string; raw: unknown };
 const cacheKey = (latitude: number, longitude: number, startYear: number, endYear: number) => `terrawise.power.v1:${latitude}:${longitude}:${startYear}:${endYear}`;
 
-function parsePeriod(raw: unknown, latitude: number, longitude: number, startYear: number, endYear: number, retrievedAt: string, cache: 'fresh' | 'cached'): ClimateData {
+export function parsePeriod(raw: unknown, latitude: number, longitude: number, startYear: number, endYear: number, retrievedAt: string, cache: 'fresh' | 'cached'): ClimateData {
   const parsed = Array.from({ length: endYear - startYear + 1 }, (_, index) => parsePowerResponse(raw, startYear + index));
   const missing = parsed.flatMap(item => item.monthly.flatMap((month, index) => month.humidity == null ? [`RH2M ${item.year}-${String(index + 1).padStart(2, '0')}`] : []));
   const response = raw as PowerResponse;

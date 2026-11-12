@@ -1,0 +1,18 @@
+.demo-entry { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 18px 0; }
+.demo-entry small { color: #646e60; font-size: 12px; }
+.demo-entry p { flex-basis: 100%; }
+.demo-banner { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; padding: 20px; margin-bottom: 28px; border: 1px solid #c9aa64; border-radius: 14px; background: #fff8e8; color: #59471e; }
+.demo-banner-copy { flex: 1 1 280px; min-width: 0; }
+.demo-banner-copy strong { display: flex; align-items: center; gap: 8px; font-size: 13px; letter-spacing: .06em; }
+.demo-banner-copy p { font-size: 13px; line-height: 1.6; margin: 8px 0; }
+.demo-banner-copy small { display: block; font-size: 12px; line-height: 1.5; }
+.demo-banner-actions { flex: 0 1 340px; min-width: 0; max-width: 100%; }
+.demo-banner-actions label { display: grid; gap: 7px; font-size: 12px; }
+.demo-banner-actions select { width: 100%; min-width: 0; text-overflow: ellipsis; }
+.demo-banner-actions .button-row { margin-top: 10px; flex-wrap: wrap; }
+.demo-banner-actions .btn { font-size: 12px; padding: 10px 12px; }
+.demo-reset-status { flex-basis: 100%; font-size: 13px; margin: 0; }
+.demo-map-note { font-size: 12px; padding: 8px; background: #f5f0df; margin: 0; }
+.demo-map .leaflet-container { background: repeating-linear-gradient(0deg, transparent, transparent 39px, #d5dfd1 40px), repeating-linear-gradient(90deg, #edf1e9, #edf1e9 39px, #d5dfd1 40px); }
+@media (max-width: 760px) { .demo-banner { padding: 16px; gap: 14px; } .demo-banner-actions { flex-basis: 100%; } .demo-banner-copy { flex-basis: 100%; } }
+@media print { .demo-banner-actions, .demo-reset-status { display: none; } .demo-banner { display: block !important; break-inside: avoid; } }

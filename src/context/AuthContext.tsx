@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core'
+const authRedirect = (path: string) => Capacitor.isNativePlatform() ? 'terrawise://auth' + path : window.location.origin + path
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase, supabaseConfigurationError } from '../services/supabase'
@@ -60,13 +62,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signIn(email: string, password: string) { demoOverride.current = false; const { data, error } = await requireClient().auth.signInWithPassword({ email, password }); if (error) throw error; setSession(data.session); setAuthError(null); setAttempt(value => value + 1) }
   async function signUp(name: string, email: string, password: string) {
     demoOverride.current = false
-    const { data, error } = await requireClient().auth.signUp({ email, password, options: { data: { display_name: name }, emailRedirectTo: `${window.location.origin}/login` } })
+    const { data, error } = await requireClient().auth.signUp({ email, password, options: { data: { display_name: name }, emailRedirectTo: authRedirect('/login') } })
     if (error) throw error
     if (data.session) { setSession(data.session); setAuthError(null); setAttempt(value => value + 1) }
     return { needsVerification: !data.session }
   }
   async function requestReset(email: string) {
-    const { error } = await requireClient().auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/update-password` })
+    const { error } = await requireClient().auth.resetPasswordForEmail(email, { redirectTo: authRedirect('/update-password') })
     if (error) throw error
   }
   async function updatePassword(password: string) {

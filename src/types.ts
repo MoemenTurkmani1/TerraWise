@@ -1,8 +1,8 @@
 export type WaterAvailability = 'rainfed' | 'limited' | 'reliable';
 export type Priority = 'soil-health' | 'water-saving' | 'profitability' | 'production' | 'risk-reduction';
-/** demo is retained only to recognize older saved records; new results never use it. */
+/** Demo climate is synthetic and carries separate fixture metadata. */
 export type DataSource = 'demo' | 'nasa-power' | 'unavailable';
-export type InputProvenance = 'measured' | 'estimated' | 'unknown';
+export type InputProvenance = 'measured' | 'estimated' | 'unknown' | 'synthetic';
 
 export interface FieldWaterInputs {
   fieldCapacityPercent: number | null;
@@ -20,6 +20,8 @@ export interface FieldWaterInputs {
   };
 }
 export interface Field {
+  dataClassification?: 'demo-synthetic';
+  demoFarmId?: 'bekaa' | 'north' | 'coast';
   id: string;
   name: string;
   location: string;
@@ -84,6 +86,7 @@ export interface ClimateProvenance {
 }
 
 export interface ClimateData {
+  fixture?: { kind: 'synthetic-local-demo'; version: 1; farmId: 'bekaa' | 'north' | 'coast'; coordinates: { latitude: number; longitude: number }; label: string };
   source: DataSource;
   year: number;
   monthly: ClimateMonth[];

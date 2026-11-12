@@ -1,5 +1,5 @@
-import { dailyPowerUrl, datesBetween } from './nasaPowerDaily'
-import { fao56DailyEto, saturationVapourPressure, type EtoResult } from '../lib/fao56'
+import { dailyPowerUrl, datesBetween } from './nasaPowerDaily.ts'
+import { fao56DailyEto, saturationVapourPressure, type EtoResult } from '../lib/fao56.ts'
 
 const parameters = ['T2M_MIN', 'T2M_MAX', 'T2MDEW', 'WS2M', 'PS', 'ALLSKY_SFC_SW_DWN', 'PRECTOTCORR'] as const
 type Parameter = typeof parameters[number]

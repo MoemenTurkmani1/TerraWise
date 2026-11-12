@@ -10,3 +10,8 @@ audit-report.json
 fava-source.json
 .codex-tmp
 *.tsbuildinfo
+
+*.jks
+*.keystore
+*.p12
+*.mobileprovision

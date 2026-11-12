@@ -1,4 +1,4 @@
-# TerraWise requirements gap analysis
+# AgriLumina requirements gap analysis
 
 Source reviewed: all **five pages** of [.docs/TerraWise_Complete_Project_Requirements_EN.pdf](.docs/TerraWise_Complete_Project_Requirements_EN.pdf), including sections 01–20. Reference images were visually inspected in filename order: [1 – dashboard](.design-references/Capture%20d%27%C3%A9cran%202026-11-11%20000650.png), [2 – field and soil](.design-references/Capture%20d%27%C3%A9cran%202026-11-11%20000658.png), [3 – ranked crops](.design-references/Capture%20d%27%C3%A9cran%202026-11-11%20000710.png), and [4 – authentication](.design-references/Capture%20d%27%C3%A9cran%202026-11-11%20000718.png). The PDF controls when images conflict with it: their numerical yield/profit examples must not become unsupported forecasts, and Google/Apple sign-in is a later option.
 

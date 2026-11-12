@@ -1,4 +1,4 @@
-import type { Field } from '../types'
+import type { Field } from '../types.ts'
 
 /** Edited starter records may contain simulated inputs until reviewed. */
 export function needsLegacyReview(field: Field): boolean {

@@ -1,15 +1,17 @@
 import { supabase } from './supabase'
+import { assertRealData, assertRealSession } from '../lib/demoSession'
 import type { Field, RotationStep } from '../types'
 import type { AnalysisRecord } from '../types/analysis'
 
 export interface WorkspacePreferences { name: string; climateMode: 'demo' | 'live'; language: 'en' | 'ar'; areaUnit: 'ha' | 'acre' }
-export interface WorkspaceData { fields: Field[]; plans: Record<string, RotationStep[]>; preferences: WorkspacePreferences; analysisRecords: AnalysisRecord[] }
+export interface WorkspaceData { dataClassification?: 'demo-synthetic'; fields: Field[]; plans: Record<string, RotationStep[]>; preferences: WorkspacePreferences; analysisRecords: AnalysisRecord[] }
 export interface RemoteWorkspace { data: unknown; version: number }
 
 /** Reads and writes are scoped twice: the query includes owner_id and the
  * database must also enforce auth.uid() via RLS. The version predicate prevents
  * one browser tab silently overwriting a newer version from another tab. */
 export async function readRemoteWorkspace(ownerId: string): Promise<RemoteWorkspace | null> {
+  assertRealSession()
   if (!supabase) throw new Error('Supabase is not configured.')
   const { data, error } = await supabase.from('terrawise_workspaces').select('fields,plans,preferences,analyses,version').eq('owner_id', ownerId).maybeSingle()
   if (error) throw new Error(`Could not load the account workspace: ${error.message}`)
@@ -19,7 +21,9 @@ export async function readRemoteWorkspace(ownerId: string): Promise<RemoteWorksp
 }
 
 export async function writeRemoteWorkspace(ownerId: string, workspace: WorkspaceData, version: number): Promise<number> {
+  assertRealSession()
   if (!supabase) throw new Error('Supabase is not configured.')
+  assertRealData(workspace)
   const payload = { fields: workspace.fields, plans: workspace.plans, preferences: workspace.preferences, analyses: workspace.analysisRecords, updated_at: new Date().toISOString() }
   if (version === 0) {
     const { data, error } = await supabase.from('terrawise_workspaces').insert({ owner_id: ownerId, ...payload, version: 1 }).select('version').single()

@@ -1,3 +1,4 @@
+import { canSaveAnalysis } from '../lib/analysisEvidence'
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Field, Recommendation, RotationStep } from '../types'
 import { isAnalysisRecord, type AnalysisRecord } from '../types/analysis'
@@ -5,6 +6,10 @@ import { crops } from '../data/crops'
 import { FIELD_STORAGE_KEY, fieldRepository, isField, isUntouchedLegacySample } from '../services/repository'
 import { readRemoteWorkspace, writeRemoteWorkspace, type WorkspaceData, type WorkspacePreferences } from '../services/supabaseWorkspace'
 import { historySerial } from '../lib/history'
+import { useDemo } from './DemoContext'
+import { createDemoWorkspace, tagDemoField } from '../data/demo'
+import { readDemoWorkspace, writeDemoWorkspace } from '../services/demoWorkspace'
+import { assertRealData, type DemoFarmId } from '../lib/demoSession'
 import { useAuth } from './AuthContext'
 
 export type Preferences = WorkspacePreferences
@@ -91,6 +96,7 @@ function readInitialState() {
   return { fields, preferences, plans, analysisRecords, issues }
 }
 function parseRemote(value: unknown): WorkspaceData {
+  assertRealData(value)
   if (!isRecord(value) || !Array.isArray(value.fields) || !value.fields.every(isField) || new Set(value.fields.map(field => field.id)).size !== value.fields.length || !isRecord(value.plans) || !isRecord(value.preferences) || !Array.isArray(value.analysisRecords) || !value.analysisRecords.every(isAnalysisRecord)) throw new Error('The account workspace has an unsupported format. No data was changed.')
   const p = value.preferences
   if (typeof p.name !== 'string' || !p.name.trim() || p.name.length > 60 || !['demo', 'live'].includes(String(p.climateMode))) throw new Error('Account preferences have an unsupported format. No data was changed.')
@@ -106,19 +112,27 @@ function parseRemote(value: unknown): WorkspaceData {
  * or switches accounts. Guest records never become an authenticated workspace. */
 export function AppProvider({ children }: { children: ReactNode }) {
   const auth = useAuth()
+  const demo = useDemo()
+  if (demo.active) return <WorkspaceProvider key={`demo:${demo.farmId}:${demo.revision}`} ownerId={null} displayName="DEMO Farmer" demoFarmId={demo.farmId}>{children}</WorkspaceProvider>
   if (auth.loading) return <div className="page-loading" role="status"><span className="loading-leaf" /><p>Checking your session…</p></div>
   if (auth.authError) return <div className="page-loading" role="alert"><p>{auth.authError}</p><p>Your account data has not been replaced.</p><div className="button-row"><button className="btn btn-primary" onClick={auth.retryInitialization}>Retry session</button><button className="btn btn-secondary" onClick={auth.enterDemo}>Continue in local workspace</button></div></div>
   return <WorkspaceProvider key={auth.user?.id ?? 'guest'} ownerId={auth.user?.id ?? null} displayName={typeof auth.user?.user_metadata?.display_name === 'string' ? auth.user.user_metadata.display_name : 'Farmer'}>{children}</WorkspaceProvider>
 }
 
-function WorkspaceProvider({ children, ownerId, displayName }: { children: ReactNode; ownerId: string | null; displayName: string }) {
+function WorkspaceProvider({ children, ownerId, displayName, demoFarmId }: { children: ReactNode; ownerId: string | null; displayName: string; demoFarmId?: DemoFarmId }) {
   const auth = useAuth()
   // The provider is remounted for a different owner. Keep the initial name
   // stable for this owner so a token refresh or metadata change cannot reload
   // the workspace over pending, unsaved changes.
   const initialDisplayName = useRef(displayName)
-  const [initial] = useState(() => ownerId ? { fields: [] as Field[], plans: emptyPlans(), preferences: { name: displayName.slice(0, 60) || 'Farmer', climateMode: 'live' as const, language: 'en' as const, areaUnit: 'ha' as const }, analysisRecords: [] as AnalysisRecord[], issues: {} as StorageIssues } : readInitialState())
-  const [workspace, setWorkspace] = useState<WorkspaceData>(() => ({ fields: initial.fields, plans: initial.plans, preferences: initial.preferences, analysisRecords: initial.analysisRecords }))
+  const [initial] = useState(() => {
+    if (demoFarmId) {
+      try { return { ...readDemoWorkspace(localStorage, demoFarmId), issues: {} as StorageIssues } }
+      catch (error) { return { ...createDemoWorkspace(demoFarmId), issues: { fields: `${error instanceof Error ? error.message : 'Demo storage unavailable.'} Reset Demo Data before saving.` } as StorageIssues } }
+    }
+    return ownerId ? { fields: [] as Field[], plans: emptyPlans(), preferences: { name: displayName.slice(0, 60) || 'Farmer', climateMode: 'live' as const, language: 'en' as const, areaUnit: 'ha' as const }, analysisRecords: [] as AnalysisRecord[], issues: {} as StorageIssues } : readInitialState()
+  })
+  const [workspace, setWorkspace] = useState<WorkspaceData>(() => ({ ...(demoFarmId ? { dataClassification: 'demo-synthetic' as const } : {}), fields: initial.fields, plans: initial.plans, preferences: initial.preferences, analysisRecords: initial.analysisRecords }))
   const snapshot = useRef(workspace)
   const [selectedFieldId, setSelectedFieldId] = useState(() => initial.fields[0]?.id || '')
   const [issues, setIssues] = useState<StorageIssues>(initial.issues)
@@ -154,6 +168,14 @@ function WorkspaceProvider({ children, ownerId, displayName }: { children: React
   }, [ownerId, loadAttempt])
 
   async function commit(next: WorkspaceData, areas: StorageArea[]) {
+    if (!active.current) throw new Error('This workspace was closed. Reopen the field before saving.')
+    if (demoFarmId) {
+      if (unreadableAreas.current.size) throw new Error('Reset Demo Data before saving over unreadable demo storage.')
+      try { writeDemoWorkspace(localStorage, demoFarmId, next); apply(next); setIssues({}) }
+      catch (error) { const message = error instanceof Error ? error.message : 'Demo storage unavailable.'; setIssue(areas[0], message); throw new Error(message) }
+      return
+    }
+    assertRealData(next)
     if (ownerId) {
       // Optimistic display is accompanied by an explicit syncing/error state.
       // The single write queue preserves ordering, including a retry after failure.
@@ -189,6 +211,7 @@ function WorkspaceProvider({ children, ownerId, displayName }: { children: React
   }
 
   async function saveField(field: Field) {
+    if (demoFarmId) field = tagDemoField(field, demoFarmId)
     if (!isField(field)) throw new Error('Field values are invalid and could not be saved.')
     const current = snapshot.current
     const fields = current.fields.some(item => item.id === field.id) ? current.fields.map(item => item.id === field.id ? field : item) : [...current.fields, field]
@@ -205,12 +228,12 @@ function WorkspaceProvider({ children, ownerId, displayName }: { children: React
     await commit({ ...current, plans }, ['plans'])
   }
   async function updatePreferences(value: Partial<Preferences>) {
-    const current = snapshot.current, preferences = { ...current.preferences, ...value }
+    const current = snapshot.current, preferences = { ...current.preferences, ...value, climateMode: demoFarmId ? 'demo' as const : 'live' as const }
     if (!preferences.name.trim() || preferences.name.length > 60 || !['demo', 'live'].includes(preferences.climateMode) || !['en', 'ar'].includes(preferences.language) || !['ha', 'acre'].includes(preferences.areaUnit)) throw new Error('Preferences are invalid.')
     await commit({ ...current, preferences }, ['preferences'])
   }
   async function saveAnalysis(record: AnalysisRecord) {
-    if (!isAnalysisRecord(record)) throw new Error('The analysis is invalid and could not be saved.')
+    if (!isAnalysisRecord(record) || (!demoFarmId && !canSaveAnalysis(record))) throw new Error('This analysis lacks traceable climate or contains unsupported suitability results. Review your inputs and rerun it.')
     const current = snapshot.current
     await commit({ ...current, analysisRecords: [...current.analysisRecords.filter(item => item.id !== record.id), record] }, ['analyses'])
   }

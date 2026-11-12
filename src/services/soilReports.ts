@@ -1,3 +1,5 @@
+import { assertRealSession } from '../lib/demoSession'
+
 /** Private-to-this-browser report storage. Files are never uploaded by this adapter. */
 export const MAX_SOIL_REPORT_BYTES = 5 * 1024 * 1024
 export const SOIL_REPORT_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'] as const
@@ -30,6 +32,7 @@ export async function verifySoilReport(file: File): Promise<string | null> {
 }
 
 function openReports(): Promise<IDBDatabase> {
+  assertRealSession()
   if (typeof indexedDB === 'undefined') return Promise.reject(new Error('Local report storage is unavailable in this browser.'))
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('terrawise.soil-reports.v1', 1)

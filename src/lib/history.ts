@@ -1,4 +1,4 @@
-import type { Field } from '../types';
+import type { Field } from '../types.ts';
 
 /** Calendar-year convention: Winter is the start-of-year window, before Spring.
  * A winter crop entered as 2027 therefore follows Autumn 2026 and precedes

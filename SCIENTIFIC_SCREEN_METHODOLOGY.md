@@ -1,4 +1,4 @@
-# TerraWise: pH and temperature screening method
+# AgriLumina: pH and temperature screening method
 
 This is a **limited, provisional ecological screen**, not overall crop suitability, a validated planting recommendation, a predicted yield or a probability of success. Overall ranking remains unavailable because water balance, local growing periods and critical agronomic rules are not established. The existing saved-analysis and rotation models remain separate.
 
@@ -42,6 +42,6 @@ If an **available** pH or a monthly mean is at or beyond the documented absolute
 
 ## Unscored factors and limitations
 
-Irrigation category and historical rainfall are context only; no effective rainfall, ETo, Kc, actual irrigation volumes or validated water balance is computed. N/P/K are not part of this index because the applicable lab methods and locally validated nutrient responses are missing. Crop-family history produces contextual warnings, not an invented disease-safe interval or a points adjustment. Soil salinity, drainage, rooting depth, frost, heat stress, planting dates and many other constraints remain unassessed.
+Irrigation category and historical rainfall are context only in this index; it does not score effective rainfall, ETo, Kc, irrigation volumes or a water balance. Separate [water-demand calculations and entered irrigation records](WATER_AND_SEASON_METHODOLOGY.md) are available in the Bekaa panel, but they do not supply water-suitability points to this screen. N/P/K are not part of this index because the applicable lab methods and locally validated nutrient responses are missing. Crop-family history produces contextual warnings, not an invented disease-safe interval or a points adjustment. Soil salinity, drainage, rooting depth, frost, heat stress, planting dates and many other constraints remain unassessed.
 
 All screen results therefore have **low qualitative confidence**. Existing eight-category completeness is a simple input count, not confidence, calibration or a validation metric. Do not compare this score with the separate older unvalidated factor comparisons displayed in expandable profiles. The new screen is calculated live and is not included in saved analysis snapshots; the latter continue to hold the pre-existing exploratory model.

@@ -1,6 +1,6 @@
-# TerraWise
+# AgriLumina
 
-TerraWise is a mobile-first agricultural decision-support application built with React, Vite and TypeScript. It stores farmer-entered field and soil information and retrieves historical NASA POWER climate estimates for field coordinates. It provides a **provisional pH and temperature screening index** using documented FAO ECOCROP ranges, not trained AI, validated planting advice, yield or profit forecasts. Overall suitability and planting recommendations remain unknown because water compatibility and critical constraints are unassessed.
+AgriLumina is a mobile-first agricultural decision-support application built with React, Vite and TypeScript. It stores farmer-entered field and soil information and retrieves historical NASA POWER climate estimates for field coordinates. It provides a **provisional pH and temperature screening index** using documented FAO ECOCROP ranges, not trained AI, validated planting advice, yield or profit forecasts. Overall suitability and planting recommendations remain unknown because water compatibility and critical constraints are unassessed.
 
 ## Run locally
 
@@ -19,14 +19,40 @@ npm run build
 npm run preview
 ```
 
-For the browser regression test, start the preview in one terminal, then in another:
+On Windows, use `npm.cmd` in these commands if PowerShell blocks `npm.ps1`; changing the machine execution policy is unnecessary. For the browser regression test, start the preview in one terminal, then in another:
 
 ```powershell
 $env:BASE_URL = 'http://localhost:4173'
 node scripts/qa-real-data.mjs
 ```
 
-The script uses isolated Microsoft Edge browser contexts and synthetic network fixtures only within the test. Set `BROWSER_PATH` for another installed Chromium executable. Earlier `qa-app`, `qa-fields`, `qa-decisions`, and `qa-analysis` scripts expect the former seeded demo and are historical checks, not current real-data acceptance tests. `qa-auth.mjs` is a mock provider check, not proof of live Supabase isolation.
+The script uses isolated Microsoft Edge browser contexts and synthetic network fixtures only within the test. Set `BROWSER_PATH` for another installed Chromium executable. Earlier `qa-app`, `qa-fields`, `qa-decisions`, and `qa-analysis` scripts expect the former seeded demo and are historical checks, not current real-data acceptance tests.
+
+For the account-workspace regression, start a **separate terminal** with process-only synthetic configuration; keep `.env.local` unchanged:
+
+```powershell
+$env:VITE_SUPABASE_URL = 'https://mock-terrawise.supabase.co'
+$env:VITE_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_synthetic_terrawise_qa'
+$env:VITE_SUPABASE_ANON_KEY = ''
+npm.cmd run dev -- --host 127.0.0.1 --port 5179 --strictPort
+```
+
+Then run in another terminal:
+
+```powershell
+$env:BASE_URL = 'http://127.0.0.1:5179'
+node scripts/qa-auth.mjs
+```
+
+The test intercepts synthetic account and NASA requests and verifies field/water/Kc, plan, analysis and preference persistence, guest/account separation and failure/conflict handling. It is not proof of live Supabase persistence or RLS. Close the mock server terminal after testing; its environment overrides must not be used for a production build.
+
+To verify real public NASA responses through the application adapters, without a browser or account writes:
+
+```powershell
+node scripts/qa-water-live.mjs
+```
+
+This read-only check prints HTTP statuses, monthly/daily completeness, exact ETo values and an explicitly synthetic ETc illustration at a public test point. The complete season may have unknown ETo days; a successful API check does not manufacture a seasonal total. See [the final implementation report](FINAL_IMPLEMENTATION_REPORT.md) for the recorded 12 November results, **84 passing unit tests**, browser checks and successful production build.
 
 ## Sources, calculations and limitations
 
@@ -37,7 +63,7 @@ The script uses isolated Microsoft Edge browser contexts and synthetic network f
 - An optional Bekaa Valley wheat study reference uses November–June over two historical years and can retrieve daily NASA POWER temperature extremes and meteorological inputs for a provisional FAO-56 ETo estimate. Standard-condition wheat ETc requires a complete, sourced farmer-entered Kc/stage profile. Effective rainfall, net irrigation and overall water suitability remain unknown. See [water and season methodology](WATER_AND_SEASON_METHODOLOGY.md).
 - Field location and weather requests are sent to NASA; map tile requests go to OpenStreetMap. The application shell may be cached offline, but external API requests and personal data are not cached by the service worker.
 
-For detailed source verification, legacy record handling, limitations and external prerequisites, read [REAL_DATA_AUDIT.md](REAL_DATA_AUDIT.md), [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md), [PROJECT_SPEC.md](PROJECT_SPEC.md), and [REQUIREMENTS_GAP_ANALYSIS.md](REQUIREMENTS_GAP_ANALYSIS.md).
+For exact calculations and current verification results, read [FINAL_IMPLEMENTATION_REPORT.md](FINAL_IMPLEMENTATION_REPORT.md). For detailed source verification, legacy record handling, limitations and external prerequisites, read [REAL_DATA_AUDIT.md](REAL_DATA_AUDIT.md), [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md), [PROJECT_SPEC.md](PROJECT_SPEC.md), and [REQUIREMENTS_GAP_ANALYSIS.md](REQUIREMENTS_GAP_ANALYSIS.md).
 
 ## Optional Supabase accounts
 
@@ -45,7 +71,7 @@ The app includes a Supabase email/password adapter and an owner-scoped workspace
 
 1. Place `.env.local` in the project root, with `VITE_SUPABASE_URL` and the public `VITE_SUPABASE_PUBLISHABLE_KEY` (or legacy public `VITE_SUPABASE_ANON_KEY`); see [.env.example](.env.example). Restart Vite after changes. Do not share the file or paste keys in chat.
 2. Run `npm run check:supabase`. This makes read-only endpoint probes and prints HTTP statuses, never configuration values or response bodies. Endpoint reachability alone does not verify an authenticated connection, migrations or RLS.
-3. In the intended project's Dashboard, review and run [the workspace migration](supabase/migrations/20261111_workspace.sql) in the SQL Editor. It creates a single owner-keyed JSON workspace, enables RLS, grants authenticated access and creates owner policies. If a table or policies already exist, review them first: `create table if not exists` does not validate an existing schema, and the migration replaces its named policies. Check for other permissive policies and grants, which may also grant access.
+3. For a new disposable project only, review [the workspace migration](supabase/migrations/20261111_workspace.sql) in the SQL Editor. It creates a single owner-keyed JSON workspace, enables RLS, grants authenticated access and creates owner policies. Applying it is an operator setup action; this verification did not run it or change production data/policies. Do not rerun it on an existing project without separate review and authorization. If a table or policies already exist, review them first: `create table if not exists` does not validate an existing schema, and the migration replaces its named policies. Check for other permissive policies and grants, which may also grant access.
 4. In Authentication, enable email/password registration and configure the site URL and allowed redirects for the exact local origin. For the default Vite origin these include `http://localhost:5173/login` and `http://localhost:5173/update-password`. Also add the equivalent `127.0.0.1` URLs if that is how you open the app. Review email confirmation and delivery settings.
 5. Test sign-up, verification, sign-in, recovery, persistence across devices, anonymous access and isolation between two distinct accounts against your project. Do not treat client-side owner filtering as a substitute for RLS. Local guest data remains on its device and is not automatically transferred into an account workspace.
 
@@ -55,6 +81,18 @@ The reusable [client factory](src/services/supabaseClient.ts) accepts platform-s
 
 ## Architecture
 
-`src/pages` contains the screens, `src/context` workspace/auth state, `src/services/nasaPower.ts` the validated POWER adapter and tab cache, `src/services/repository.ts` browser field validation, `src/services/supabaseWorkspace.ts` optional cloud persistence, `src/data/crops.ts` the unvalidated starter catalog, and `src/lib/recommendations.ts` the versioned independent rule engine. Tests and synthetic fixtures live in `src/test` and `*.test.ts` files. A Leaflet/OpenStreetMap point map and Recharts visualizations supply the map and charts.
+`src/pages` contains the screens, `src/context` workspace/auth state, `src/services/nasaPower.ts` the validated POWER adapter and tab cache, `src/services/repository.ts` browser field validation, `src/lib/fao56.ts` and `src/lib/cropWater.ts` the daily water-demand calculations, `src/services/nasaPowerWater.ts` the daily NASA water adapter, `src/services/supabaseWorkspace.ts` optional cloud persistence, `src/data/crops.ts` the unvalidated starter catalog, and `src/lib/recommendations.ts` the versioned independent rule engine. Unit test fixtures live in `src/test` and `*.test.ts` files; isolated local demo scenarios live in `src/data/demo.ts`. A Leaflet/OpenStreetMap point map and Recharts visualizations supply the map and charts.
 
 This is not production-ready until agronomic validation, actual provider/RLS testing, privacy and legal review, monitoring/backups, Arabic/RTL, accessibility and physical-device checks are completed. No public deployment has been made.
+
+## AI Agronomist
+
+The read-only English/Arabic field assistant is available at /agronomist. Live responses require an approved Supabase Edge Function deployment, Gemini Free credentials, verified card-free Free service accounts and an Upstash Free durable usage limiter. Paid providers and automatic fallback are disabled. See [.docs/AI_AGRONOMIST.md](.docs/AI_AGRONOMIST.md) for configuration, security boundaries, scientific grounding and verification.
+
+## Local Demo Mode
+
+Run `npm run dev` and click **Try Demo Farm**. Switch between three clearly labeled synthetic farms, explore existing calculations and saved records, and use **Reset Demo Data** to start again. Demo data never synchronizes with real accounts. See [the local demo guide](LOCAL_DEMO_MODE.md) for features, scientific provenance, isolation and validation. Run `npm run qa:demo` against a running local server for desktop and mobile regression checks.
+
+## Website and native mobile release
+
+The current MVP improvements and native targets are documented in [MVP_RELEASE_REPORT.md](MVP_RELEASE_REPORT.md), [NATIVE_APPS.md](NATIVE_APPS.md), and [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md). The earlier scientific milestone report remains historical evidence. No public deployment or signed mobile release has been performed.

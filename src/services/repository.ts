@@ -1,4 +1,5 @@
 import type { Field } from '../types';
+import { assertRealData, assertRealSession } from '../lib/demoSession';
 export { needsLegacyReview } from '../lib/legacyField';
 
 export const FIELD_STORAGE_KEY = 'terrawise.fields.v1';
@@ -37,12 +38,14 @@ export function isField(value: unknown): value is Field {
   if (!validText(field.id) || !validText(field.name) || !validText(field.location) || typeof field.image !== 'string') return false;
   if (!validNumber(field.area, 0.001, 1_000_000) || !validNumber(field.latitude, -90, 90) || !validNumber(field.longitude, -180, 180)) return false;
   if (!['rainfed', 'limited', 'reliable'].includes(field.water) || !field.soil || typeof field.soil !== 'object') return false;
+  if (field.dataClassification !== undefined && field.dataClassification !== 'demo-synthetic') return false;
+  if (field.demoFarmId !== undefined && !['bekaa', 'north', 'coast'].includes(field.demoFarmId)) return false;
   const soil = field.soil;
   if (!(soil.ph === null || validNumber(soil.ph, 0, 14)) || !(soil.organicMatter === null || validNumber(soil.organicMatter, 0, 100))) return false;
   if (![soil.nitrogen, soil.phosphorus, soil.potassium].every((entry) => entry === null || validNumber(entry, 0, 100_000))) return false;
   if (!optionalNumber(soil.salinity, 0, 100) || !optionalNumber(soil.moisture, 0, 100) || !optionalNumber(soil.sampleDepthCm, 0, 1000)) return false;
   if (!optionalText(soil.texture) || !optionalText(soil.laboratory) || !optionalText(soil.testMethod) || !optionalDate(soil.sampleDate)) return false;
-  if (soil.provenance !== undefined && !['measured', 'estimated', 'unknown'].includes(soil.provenance)) return false;
+  if (soil.provenance !== undefined && !['measured', 'estimated', 'unknown', 'synthetic'].includes(soil.provenance)) return false;
   if (field.areaUnit !== undefined && !['ha', 'acre'].includes(field.areaUnit)) return false;
   if (field.locationSource !== undefined && !['manual', 'map', 'gps'].includes(field.locationSource)) return false;
   if (field.archived !== undefined && typeof field.archived !== 'boolean') return false;
@@ -69,15 +72,19 @@ export function isField(value: unknown): value is Field {
 
 export const fieldRepository: FieldRepository = {
   getAll() {
+    assertRealSession();
     if (typeof localStorage === 'undefined') return [];
     const saved = localStorage.getItem(FIELD_STORAGE_KEY);
     if (saved === null) return [];
     let parsed: unknown;
     try { parsed = JSON.parse(saved); } catch { throw new Error('Saved fields could not be read. Existing browser data was left untouched.'); }
     if (!Array.isArray(parsed) || !parsed.every(isField) || new Set(parsed.map((field) => field.id)).size !== parsed.length) throw new Error('Saved fields have an unsupported format. Existing browser data was left untouched.');
+    assertRealData(parsed);
     return parsed;
   },
   saveAll(fields) {
+    assertRealSession();
+    assertRealData(fields);
     if (!fields.every(isField) || new Set(fields.map((field) => field.id)).size !== fields.length) throw new Error('Field values are invalid and could not be saved.');
     if (typeof localStorage === 'undefined') throw new Error('Browser storage is unavailable; fields could not be saved.');
     try { localStorage.setItem(FIELD_STORAGE_KEY, JSON.stringify(fields)); } catch { throw new Error('Browser storage is full or unavailable. Export your data before closing this tab.'); }

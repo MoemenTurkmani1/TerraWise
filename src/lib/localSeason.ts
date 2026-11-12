@@ -1,3 +1,4 @@
+import { hasSyntheticClimate } from './demoEvidence'
 import { crops } from '../data/crops'
 import { ecocropScreenRequirements } from '../data/ecocropScreen'
 import type { ClimateData, ClimateMonth, Field } from '../types'
@@ -41,7 +42,7 @@ export function screenBekaaWheat(field: Field, climate: ClimateData, season: str
   if (ph === null || !Number.isFinite(ph) || ph < 0 || ph > 14) unavailable.push('Enter a valid soil pH.')
   const year = climate.year
   const provenance = climate.provenance
-  const validSource = climate.source === 'nasa-power' && provenance?.provider === 'NASA POWER'
+  const validSource = (hasSyntheticClimate(field, climate) && climate.history?.length === 2 && climate.history[0].year === year - 1 && climate.history[1].year === year) || climate.source === 'nasa-power' && provenance?.provider === 'NASA POWER'
     && provenance.coordinates.latitude === field.latitude && provenance.coordinates.longitude === field.longitude
     && Number.isInteger(year) && provenance.period.start === `${year - 1}-01-01` && provenance.period.end === `${year}-12-31`
     && provenance.parameters.some(p => p.code === 'T2M' && p.unit === '°C' && ['C', '°C', 'degC'].includes(p.sourceUnit))
@@ -52,7 +53,7 @@ export function screenBekaaWheat(field: Field, climate: ClimateData, season: str
     month?.month === names[(index + 10) % 12] && Number.isFinite(month.temperature) && month.temperature >= -90 && month.temperature <= 65)
   if (!validSource || !validMonths) unavailable.push('Two complete historical years for the exact field location are required for November–June.')
   const period = season === 'Autumn' && validSource && validMonths ? { start: `${year - 1}-11-01`, end: `${year}-06-30` } : null
-  const water = period && provenance?.parameters.some(p => p.code === 'PRECTOTCORR' && p.unit === 'mm/month' && ['mm/day', 'mm d-1'].includes(p.sourceUnit))
+  const water = period && (hasSyntheticClimate(field, climate) || provenance?.parameters.some(p => p.code === 'PRECTOTCORR' && p.unit === 'mm/month' && ['mm/day', 'mm d-1'].includes(p.sourceUnit)))
     ? waterEvidence(months) : emptyWater
   if (unavailable.length || ph === null || !period) return { screen: { ranked: [], excluded: [], unavailable }, period, water }
   const crop = crops.find(item => item.id === 'wheat')!
@@ -70,6 +71,7 @@ export function screenBekaaWheat(field: Field, climate: ClimateData, season: str
   }
   const previous = crops.find(item => item.id === sortedHistory(field.previousCrops)[0]?.cropId)
   const warnings = [
+    ...(climate.source === 'demo' ? ['DEMO / SYNTHETIC climate and pH. The published study does not validate these fictional inputs.'] : []),
     'Bekaa location is user-selected and has not been verified against a geographic boundary.',
     'November–June is a published study period for wheat; its application to this field and durum cultivar is unverified.',
     'This is a pH and historical temperature screen, not a water balance or planting recommendation.',

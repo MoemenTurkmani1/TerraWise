@@ -1,4 +1,4 @@
-import type { Crop } from '../types';
+import type { Crop } from '../types.ts';
 
 /** Starter reference ranges are deliberately broad, configurable, and uncalibrated.
  * These preliminary rules support northern Mediterranean exploration, not planting prescriptions.

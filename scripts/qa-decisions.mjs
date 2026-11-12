@@ -134,7 +134,7 @@ try {
   const downloadEvent = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export plan', exact: true }).click();
   const download = await downloadEvent;
-  assert.equal(download.suggestedFilename(), 'terrawise-north-field-rotation.json');
+  assert.equal(download.suggestedFilename(), 'agrilumina-north-field-rotation.json');
   await page.screenshot({ path: 'test-results/planner-desktop.png', fullPage: true });
 
   // Incomplete browser snapshots must be skipped safely without overwriting

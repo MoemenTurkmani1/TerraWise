@@ -1,6 +1,6 @@
 {
-  "name": "TerraWise — Smart crop rotation",
-  "short_name": "TerraWise",
+  "name": "AgriLumina",
+  "short_name": "AgriLumina",
   "description": "Explainable, climate-aware crop rotation planning.",
   "start_url": "/",
   "display": "standalone",

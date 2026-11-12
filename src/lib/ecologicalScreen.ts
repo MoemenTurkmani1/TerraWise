@@ -1,8 +1,9 @@
-import { crops } from '../data/crops'
-import { ecocropScreenRequirements, type EcologicalRange, type EcocropScreenRequirement } from '../data/ecocropScreen'
-import type { ClimateData, Crop, Field } from '../types'
-import { sortedHistory } from './history'
-import { needsLegacyReview } from './legacyField'
+import { hasSyntheticClimate } from './demoEvidence.ts'
+import { crops } from '../data/crops.ts'
+import { ecocropScreenRequirements, type EcologicalRange, type EcocropScreenRequirement } from '../data/ecocropScreen.ts'
+import type { ClimateData, Crop, Field } from '../types.ts'
+import { sortedHistory } from './history.ts'
+import { needsLegacyReview } from './legacyField.ts'
 
 const windows: Record<'Spring' | 'Autumn', readonly number[]> = { Spring: [2, 3, 4, 5], Autumn: [8, 9, 10, 11] }
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -36,7 +37,7 @@ export interface ScreenResult {
 
 /** A limited two-factor screen, never an overall crop recommendation.
  * It uses a fixed four-month UI window, not a verified growing season. */
-export function screenCrops(field: Field, climate: ClimateData, season: string): ScreenResult {
+export function screenCrops(field: Field, climate: ClimateData, season: string, limit = 4): ScreenResult {
   const unavailable: string[] = []
   if (needsLegacyReview(field)) unavailable.push('Review the older example-derived field.')
   const indices = season === 'Spring' || season === 'Autumn' ? windows[season] : null
@@ -44,7 +45,7 @@ export function screenCrops(field: Field, climate: ClimateData, season: string):
   const ph = field.soil.ph
   if (ph === null || !Number.isFinite(ph) || ph < 0 || ph > 14) unavailable.push('Enter a valid soil pH.')
   const provenance = climate.provenance
-  const climateMatches = climate.source === 'nasa-power' && provenance?.provider === 'NASA POWER'
+  const climateMatches = hasSyntheticClimate(field, climate) || climate.source === 'nasa-power' && provenance?.provider === 'NASA POWER'
     && provenance.coordinates.latitude === field.latitude && provenance.coordinates.longitude === field.longitude
     && Number.isInteger(climate.year) && provenance.period.end === `${climate.year}-12-31`
     && provenance.parameters.some(parameter => parameter.code === 'T2M' && parameter.unit === '°C' && ['C', '°C', 'degC'].includes(parameter.sourceUnit))
@@ -72,6 +73,7 @@ export function screenCrops(field: Field, climate: ClimateData, season: string):
       continue
     }
     const warnings = [
+      ...(climate.source === 'demo' ? ['DEMO / SYNTHETIC inputs: a calculated test result, not NASA evidence or a planting recommendation.'] : []),
       'This screen covers only pH and four historical monthly mean temperatures; it is not overall suitability or a planting recommendation.',
       'Water balance, locally valid sowing dates, disease, salinity and crop-specific rotation constraints remain unknown.',
       'FAO ECOCROP species ranges and this screen have not been validated for this field or cultivar.',
@@ -85,5 +87,5 @@ export function screenCrops(field: Field, climate: ClimateData, season: string):
     ranked.push({ crop, requirement, score: Math.round(100 * Math.min(phFit, tempFit)), phScore: Math.round(100 * phFit), temperatureScore: Math.round(100 * tempFit), limitingMonth: limiting.month.month, limitingTemperature: limiting.month.temperature, warnings, confidence: 'low' })
   }
   ranked.sort((a, b) => b.score - a.score || a.crop.name.localeCompare(b.crop.name))
-  return { ranked: ranked.slice(0, 4), excluded, unavailable }
+  return { ranked: ranked.slice(0, Math.max(0, Math.min(crops.length, Math.floor(limit)))), excluded, unavailable }
 }

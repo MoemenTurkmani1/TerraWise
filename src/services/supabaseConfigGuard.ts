@@ -2,8 +2,8 @@
 export function assertNoBrowserSecrets(env: Record<string, string | undefined>): void {
   for (const [name, value] of Object.entries(env)) {
     if (!name.startsWith('VITE_') || !value) continue
-    const secretName = /SERVICE_ROLE|SECRET|PRIVATE_KEY/i.test(name)
-    const secretPrefix = value.startsWith('sb_secret_')
+    const secretName = /SERVICE_ROLE|SECRET|PRIVATE_KEY|OPENAI|ANTHROPIC|GEMINI|GROQ|GOOGLE_AI|UPSTASH|REDIS|API_KEY|ACCESS_TOKEN|AUTH_TOKEN/i.test(name)
+    const secretPrefix = (value.startsWith('sb_secret_') || value.startsWith('sk-') || value.startsWith('AIza') || value.startsWith('gsk_'))
     let privilegedJwt = false
     if (value.split('.').length === 3) {
       try {
@@ -12,6 +12,6 @@ export function assertNoBrowserSecrets(env: Record<string, string | undefined>):
         privilegedJwt = !!claims && typeof claims === 'object' && 'role' in claims && (claims as { role?: unknown }).role === 'service_role'
       } catch { /* Invalid unrelated values are handled by their own configuration. */ }
     }
-    if (secretName || secretPrefix || privilegedJwt) throw new Error(`Unsafe browser environment variable ${name}. Remove privileged credentials from all VITE_ variables before starting or building TerraWise.`)
+    if (secretName || secretPrefix || privilegedJwt) throw new Error(`Unsafe browser environment variable ${name}. Remove privileged credentials from all VITE_ variables before starting or building AgriLumina.`)
   }
 }
