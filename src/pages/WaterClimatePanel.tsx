@@ -4,6 +4,7 @@ import type { Field } from '../types'
 import { fetchWaterClimate, type WaterClimateSeries } from '../services/nasaPowerWater'
 import { completeGrowthProfile, cropKcOnDate, standardCropEt } from '../lib/cropWater'
 import { Button } from '../components/ui'
+import WaterBalanceCalculator from './WaterBalanceCalculator'
 
 export default function WaterClimatePanel({ field, period }: { field: Field; period: { start: string; end: string } }) {
   const key = `${field.latitude}:${field.longitude}:${field.elevationM ?? 'unknown'}:${period.start}:${period.end}`
@@ -42,5 +43,6 @@ export default function WaterClimatePanel({ field, period }: { field: Field; per
     <p><strong>{schedule?.scheduleKind === 'planned' ? 'Planned irrigation applied' : 'Recorded irrigation applied'}:</strong> {applied === null ? 'Unknown for this period; a complete dated schedule is required.' : `${applied.toFixed(1)} mm. Applied depth is not measured net infiltration.`}</p>
     <p><strong>Effective rainfall and water suitability:</strong> insufficient data. A daily root-zone balance needs runoff, net infiltration, capillary rise, actual crop evapotranspiration, drainage and a locally reviewed stress threshold. No missing flux is assumed to be zero.</p>
     <Link to={`/fields/${field.id}`}>Review or enter water and crop-stage inputs</Link>
+    <WaterBalanceCalculator />
   </div>
 }

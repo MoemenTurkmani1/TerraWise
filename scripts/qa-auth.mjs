@@ -43,8 +43,8 @@ await page.route('https://mock-terrawise.supabase.co/**', async route => {
     }
     if (method === 'PATCH') {
       const prior = workspaces.get(owner), expected = Number(url.searchParams.get('version')?.replace(/^eq\./, ''))
-      if (!prior || prior.version !== expected) return json(route, 200, [])
-      workspaces.set(owner, { ...prior, ...body }); return json(route, 200, [{ version: body.version }])
+      if (!prior || prior.version !== expected) return json(route, 406, { code: 'PGRST116', details: 'The result contains 0 rows', message: 'JSON object requested' })
+      workspaces.set(owner, { ...prior, ...body }); return json(route, 200, { version: body.version })
     }
   }
   return json(route, 404, { message: `Unexpected mock request ${method} ${url.pathname}` })
@@ -88,8 +88,16 @@ try {
   await createField('Alice private field')
   assert.equal(workspaces.get(users['alice@example.test'].id).fields[0].name, 'Alice private field')
   assert.equal(workspaces.get(users['alice@example.test'].id).fields.length, 1, 'Guest fields must not be copied to the account')
+  const water = page.locator('.water-inputs-section')
+  await water.getByLabel('Field capacity (% volume)').fill('30')
+  await water.getByLabel('Permanent wilting point (% volume)').fill('10')
+  await water.getByLabel('Effective rooting depth (m)').fill('1')
+  await water.getByRole('button', { name: 'Save water inputs' }).click()
+  await expect(water.getByText('Water inputs saved. Unknown values remain unknown.')).toBeVisible()
+  assert.equal(workspaces.get(users['alice@example.test'].id).fields[0].waterInputs.fieldCapacityPercent, 30)
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Alice private field', exact: true })).toBeVisible()
+  await expect(page.locator('.water-inputs-section').getByLabel('Field capacity (% volume)')).toHaveValue('30')
   await logout()
   await page.goto(origin)
   await expect(page.getByText('Guest test field', { exact: true }).first()).toBeVisible()

@@ -44,7 +44,7 @@ describe('stage-aware crop demand', () => {
   })
 })
 
-const balance: WaterBalanceInputs = { previousDepletionMm: 20, totalAvailableWaterMm: 100, rainfallMm: 10, runoffMm: 2, netIrrigationMm: 0, capillaryRiseMm: 0, actualEtMm: 5, deepPercolationMm: 0, locallyReviewedDepletionFraction: 0.5, thresholdSource: 'Synthetic test source' }
+const balance: WaterBalanceInputs = { previousDepletionMm: 20, totalAvailableWaterMm: 100, rainfallMm: 10, runoffMm: 2, netIrrigationMm: 0, capillaryRiseMm: 0, actualEtMm: 5, deepPercolationMm: 0, allowableDepletionFraction: 0.5, thresholdSource: 'Synthetic test source' }
 describe('explicit-input FAO-56 root-zone balance', () => {
   it('calculates total available water only from complete volumetric inputs', () => {
     expect(totalAvailableWater(30, 10, 1)).toBeCloseTo(200)
@@ -52,9 +52,9 @@ describe('explicit-input FAO-56 root-zone balance', () => {
     expect(totalAvailableWater(10, 30, 1)).toBeNull()
   })
   it('distinguishes a supplied threshold crossing and its boundary', () => {
-    expect(evaluateWaterBalance(balance)).toMatchObject({ status: 'assessed', depletionMm: 17, assessment: 'within_reviewed_threshold' })
-    expect(evaluateWaterBalance({ ...balance, previousDepletionMm: 53 })).toMatchObject({ status: 'assessed', depletionMm: 50, assessment: 'within_reviewed_threshold' })
-    expect(evaluateWaterBalance({ ...balance, previousDepletionMm: 54 })).toMatchObject({ status: 'assessed', depletionMm: 51, assessment: 'above_reviewed_threshold' })
+    expect(evaluateWaterBalance(balance)).toMatchObject({ status: 'assessed', depletionMm: 17, assessment: 'within_supplied_threshold' })
+    expect(evaluateWaterBalance({ ...balance, previousDepletionMm: 53 })).toMatchObject({ status: 'assessed', depletionMm: 50, assessment: 'within_supplied_threshold' })
+    expect(evaluateWaterBalance({ ...balance, previousDepletionMm: 54 })).toMatchObject({ status: 'assessed', depletionMm: 51, assessment: 'above_supplied_threshold' })
   })
   it('requires every flux and does not equate rainfall with effective rain or irrigation', () => {
     expect(evaluateWaterBalance({ ...balance, netIrrigationMm: null }).status).toBe('insufficient_data')
