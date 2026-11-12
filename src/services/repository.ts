@@ -50,6 +50,17 @@ export function isField(value: unknown): value is Field {
   if (!optionalNumber(field.elevationM, -500, 9000) || !optionalText(field.country) || !optionalText(field.soilType) || !optionalText(field.budget)) return false;
   if (field.riskTolerance !== undefined && !['low', 'medium', 'high', 'unknown'].includes(field.riskTolerance)) return false;
   if (field.irrigation !== undefined && (!field.irrigation || typeof field.irrigation !== 'object' || !optionalText(field.irrigation.method) || !optionalText(field.irrigation.source) || !optionalText(field.irrigation.seasonalRestrictions))) return false;
+  if (field.waterInputs !== undefined) {
+    const water = field.waterInputs;
+    if (!water || typeof water !== 'object' || !optionalNumber(water.fieldCapacityPercent, 0, 100) || !optionalNumber(water.wiltingPointPercent, 0, 100) || !optionalNumber(water.rootDepthM, 0, 20) || !optionalNumber(water.initialDepletionMm, 0, 20000)) return false;
+    if (water.fieldCapacityPercent !== null && water.wiltingPointPercent !== null && water.fieldCapacityPercent <= water.wiltingPointPercent) return false;
+    if (!['unknown', 'actual', 'planned'].includes(water.scheduleKind) || !optionalDate(water.scheduleStart) || !optionalDate(water.scheduleEnd) || (water.scheduleStart && water.scheduleEnd && water.scheduleStart > water.scheduleEnd)) return false;
+    if (!Array.isArray(water.irrigationEvents) || water.irrigationEvents.length > 1000 || !water.irrigationEvents.every(event => event && typeof event.date === 'string' && event.date !== '' && optionalDate(event.date) && validNumber(event.appliedMm, 0, 10000))) return false;
+    const growth = water.growth;
+    if (!growth || typeof growth !== 'object' || !optionalText(growth.cropId) || !optionalDate(growth.plantedOn) || !optionalText(growth.source)) return false;
+    if (![growth.initialDays, growth.developmentDays, growth.midDays, growth.lateDays].every(value => value === null || (validNumber(value, 1, 366) && Number.isInteger(value)))) return false;
+    if (![growth.kcInitial, growth.kcMid, growth.kcEnd].every(value => value === null || validNumber(value, 0, 10))) return false;
+  }
   if (field.soilReport !== undefined && (!field.soilReport || !validText(field.soilReport.id) || !validText(field.soilReport.filename) || !['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(field.soilReport.mimeType) || !validNumber(field.soilReport.size, 1, 5 * 1024 * 1024))) return false;
   if (!Array.isArray(field.priorities) || !field.priorities.every((entry) => ['soil-health', 'water-saving', 'profitability', 'production', 'risk-reduction'].includes(entry))) return false;
   if (!Array.isArray(field.previousCrops) || !field.previousCrops.every((entry) => entry && validText(entry.cropId) && validText(entry.season) && validNumber(entry.year, 1900, 2200) && Number.isInteger(entry.year) && optionalDate(entry.plantedAt) && optionalDate(entry.harvestedAt) && optionalText(entry.diseaseNotes) && optionalText(entry.residueManagement))) return false;

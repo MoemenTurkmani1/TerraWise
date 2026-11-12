@@ -113,6 +113,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 function WorkspaceProvider({ children, ownerId, displayName }: { children: ReactNode; ownerId: string | null; displayName: string }) {
   const auth = useAuth()
+  // The provider is remounted for a different owner. Keep the initial name
+  // stable for this owner so a token refresh or metadata change cannot reload
+  // the workspace over pending, unsaved changes.
+  const initialDisplayName = useRef(displayName)
   const [initial] = useState(() => ownerId ? { fields: [] as Field[], plans: emptyPlans(), preferences: { name: displayName.slice(0, 60) || 'Farmer', climateMode: 'live' as const, language: 'en' as const, areaUnit: 'ha' as const }, analysisRecords: [] as AnalysisRecord[], issues: {} as StorageIssues } : readInitialState())
   const [workspace, setWorkspace] = useState<WorkspaceData>(() => ({ fields: initial.fields, plans: initial.plans, preferences: initial.preferences, analysisRecords: initial.analysisRecords }))
   const snapshot = useRef(workspace)
@@ -139,7 +143,7 @@ function WorkspaceProvider({ children, ownerId, displayName }: { children: React
     setLoadFailed(false); setSyncState('loading')
     void readRemoteWorkspace(ownerId).then(remote => {
       if (cancelled) return
-      const next = remote ? parseRemote(remote.data) : { fields: [], plans: emptyPlans(), preferences: { name: displayName.slice(0, 60) || 'Farmer', climateMode: 'live' as const, language: 'en' as const, areaUnit: 'ha' as const }, analysisRecords: [] }
+      const next = remote ? parseRemote(remote.data) : { fields: [], plans: emptyPlans(), preferences: { name: initialDisplayName.current.slice(0, 60) || 'Farmer', climateMode: 'live' as const, language: 'en' as const, areaUnit: 'ha' as const }, analysisRecords: [] }
       revision.current = remote?.version ?? 0
       apply(next); setSelectedFieldId(next.fields[0]?.id || ''); setIssues({}); setSyncState('synced')
     }).catch(error => {
@@ -147,7 +151,7 @@ function WorkspaceProvider({ children, ownerId, displayName }: { children: React
       setLoadFailed(true); setSyncState('error'); setIssue('fields', error instanceof Error ? error.message : 'The account workspace could not be loaded.')
     })
     return () => { cancelled = true; active.current = false }
-  }, [ownerId, displayName, loadAttempt])
+  }, [ownerId, loadAttempt])
 
   async function commit(next: WorkspaceData, areas: StorageArea[]) {
     if (ownerId) {

@@ -6,6 +6,7 @@ import { assertNoBrowserSecrets } from './src/services/supabaseConfigGuard'
 export default defineConfig(({ mode }) => {
   assertNoBrowserSecrets(loadEnv(mode, process.cwd(), ''))
   return {
+  server: { port: 5173, strictPort: true },
   plugins: [react(), tailwindcss(), {
     name: 'terrawise-offline-assets',
     apply: 'build',

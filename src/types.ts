@@ -4,6 +4,21 @@ export type Priority = 'soil-health' | 'water-saving' | 'profitability' | 'produ
 export type DataSource = 'demo' | 'nasa-power' | 'unavailable';
 export type InputProvenance = 'measured' | 'estimated' | 'unknown';
 
+export interface FieldWaterInputs {
+  fieldCapacityPercent: number | null;
+  wiltingPointPercent: number | null;
+  rootDepthM: number | null;
+  initialDepletionMm: number | null;
+  scheduleKind: 'unknown' | 'actual' | 'planned';
+  scheduleStart: string;
+  scheduleEnd: string;
+  irrigationEvents: { date: string; appliedMm: number }[];
+  growth: {
+    cropId: string; plantedOn: string; source: string;
+    initialDays: number | null; developmentDays: number | null; midDays: number | null; lateDays: number | null;
+    kcInitial: number | null; kcMid: number | null; kcEnd: number | null;
+  };
+}
 export interface Field {
   id: string;
   name: string;
@@ -38,6 +53,8 @@ export interface Field {
   previousCrops: { cropId: string; season: string; year: number; plantedAt?: string; harvestedAt?: string; diseaseNotes?: string; residueManagement?: string }[];
   priorities: Priority[];
   irrigation?: { method: string; source: string; seasonalRestrictions: string };
+  /** Optional user-entered data. Applied irrigation is not necessarily net infiltration. */
+  waterInputs?: FieldWaterInputs;
   budget?: string;
   riskTolerance?: 'low' | 'medium' | 'high' | 'unknown';
   soilReport?: { id: string; filename: string; mimeType: string; size: number };

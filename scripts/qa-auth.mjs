@@ -9,6 +9,7 @@ const page = await context.newPage()
 const errors = []
 const workspaces = new Map()
 let rejectWrites = false
+let workspaceReads = 0
 page.on('pageerror', error => errors.push(error.message))
 const users = {
   'alice@example.test': { id: '11111111-1111-4111-8111-111111111111', name: 'Alice' },
@@ -32,7 +33,7 @@ await page.route('https://mock-terrawise.supabase.co/**', async route => {
     try { owner = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64url').toString()).sub } catch { return json(route, 401, { message: 'Missing mock identity' }) }
     const requested = url.searchParams.get('owner_id')?.replace(/^eq\./, '')
     if (requested && requested !== owner) return json(route, 403, { message: 'Mock owner mismatch' })
-    if (method === 'GET') return json(route, 200, workspaces.has(owner) ? [workspaces.get(owner)] : [])
+    if (method === 'GET') { workspaceReads++; return json(route, 200, workspaces.has(owner) ? [workspaces.get(owner)] : []) }
     if (rejectWrites) return json(route, 503, { message: 'Synthetic service outage' })
     const body = request.postDataJSON()
     if (method === 'POST') {
@@ -48,6 +49,9 @@ await page.route('https://mock-terrawise.supabase.co/**', async route => {
   }
   return json(route, 404, { message: `Unexpected mock request ${method} ${url.pathname}` })
 })
+
+// Do not send synthetic field coordinates to the real NASA endpoint.
+await page.route('**/api/temporal/monthly/point**', route => route.fulfill({ status: 503, body: 'Synthetic test outage' }))
 
 async function login(email) {
   await page.goto(`${origin}/login`)
@@ -72,19 +76,23 @@ async function createField(name) {
   await page.getByRole('radio', { name: 'Limited irrigation' }).check()
   await page.getByRole('button', { name: 'Continue', exact: true }).click()
   await page.getByRole('button', { name: 'Continue', exact: true }).click()
+  await page.locator('input[name="priorities"][value="soil-health"]').check()
   await page.getByRole('button', { name: 'Save field', exact: true }).click()
   await expect(page.getByRole('heading', { name, exact: true })).toBeVisible({ timeout: 15000 })
 }
 try {
   await page.goto(origin)
-  await expect(page.getByRole('heading', { name: 'North Field', exact: true })).toBeVisible()
+  await createField('Guest test field')
   await login('alice@example.test')
-  await expect(page.getByText('North Field', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Guest test field', { exact: true })).toHaveCount(0)
   await createField('Alice private field')
   assert.equal(workspaces.get(users['alice@example.test'].id).fields[0].name, 'Alice private field')
+  assert.equal(workspaces.get(users['alice@example.test'].id).fields.length, 1, 'Guest fields must not be copied to the account')
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Alice private field', exact: true })).toBeVisible()
   await logout()
   await page.goto(origin)
-  await expect(page.getByRole('heading', { name: 'North Field', exact: true })).toBeVisible()
+  await expect(page.getByText('Guest test field', { exact: true }).first()).toBeVisible()
   await login('bob@example.test')
   await expect(page.getByText('Alice private field')).toHaveCount(0)
   await logout()
@@ -97,6 +105,34 @@ try {
   await page.getByRole('button', { name: 'Save changes', exact: true }).click()
   await expect(page.getByRole('alert').filter({ hasText: /Could not save|not confirmed|outage/i }).first()).toBeVisible({ timeout: 15000 })
   assert.equal(workspaces.get(users['alice@example.test'].id).fields[0].name, 'Alice private field')
+  // A metadata event for the same account must not reload over unsaved edits.
+  await page.getByRole('link', { name: 'Settings', exact: true }).click()
+  await expect(page.getByText('Unsaved test name', { exact: true })).toHaveCount(0)
+  const readsBeforeRefresh = workspaceReads
+  await page.evaluate(() => {
+    const key = Object.keys(localStorage).find(item => /^sb-.*-auth-token$/.test(item))
+    if (!key) throw new Error('Synthetic session was not persisted')
+    const session = JSON.parse(localStorage.getItem(key))
+    session.user.user_metadata.display_name = 'Changed synthetic metadata'
+    session.user.email = 'changed-synthetic@example.test'
+    const channel = new BroadcastChannel(key)
+    channel.postMessage({ event: 'USER_UPDATED', session })
+    channel.close()
+  })
+  await expect(page.getByText(/changed-synthetic@example\.test/)).toBeVisible()
+  assert.equal(workspaceReads, readsBeforeRefresh, 'Metadata changes must not reload the workspace over unsaved edits')
+  await expect(page.getByRole('alert').filter({ hasText: /not confirmed/i }).first()).toBeVisible()
+  // Simulate another browser saving a newer version; do not overwrite it.
+  rejectWrites = false
+  await page.goto(`${origin}/fields/${workspaces.get(users['alice@example.test'].id).fields[0].id}/edit`)
+  await expect(page.locator('#name')).toHaveValue('Alice private field')
+  const current = workspaces.get(users['alice@example.test'].id)
+  workspaces.set(users['alice@example.test'].id, { ...current, version: current.version + 1, fields: current.fields.map(field => ({ ...field, name: 'Newer simulated change' })) })
+  await page.locator('#name').fill('Stale simulated change')
+  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Continue', exact: true }).click()
+  await page.getByRole('button', { name: 'Save changes', exact: true }).click()
+  await expect(page.getByRole('alert').filter({ hasText: /changed in another tab/i }).first()).toBeVisible({ timeout: 15000 })
+  assert.equal(workspaces.get(users['alice@example.test'].id).fields[0].name, 'Newer simulated change')
   assert.deepEqual(errors, [])
-  console.log('PASS: synthetic account sessions, separate guest and two-user workspaces, account field persistence, and visible save failure. A real Supabase project/RLS still needs separate integration testing.')
+  console.log('PASS: synthetic session reload and logout, guest isolation, two-user workspaces, save failures, and stale-version conflict. Live Supabase/RLS still needs separate API tests.')
 } finally { await browser.close() }
